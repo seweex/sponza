@@ -29,9 +29,15 @@ find_package(caldera REQUIRED)
 
 # # # # #
 
-add_executable(sponza-simulation src/main.cpp)
+add_executable(sponza-simulation
+    src/vulkan_context.cpp
+    src/window.cpp
+    src/main.cpp)
 
-target_compile_definitions(sponza-simulation PUBLIC VULKAN_HPP_NO_EXCEPTIONS)
+target_compile_definitions(sponza-simulation PUBLIC
+    VULKAN_HPP_NO_EXCEPTIONS
+    GLFW_INCLUDE_VULKAN)
+
 target_link_libraries(sponza-simulation PUBLIC
         Vulkan::Vulkan
         GPUOpen::VulkanMemoryAllocator
@@ -40,7 +46,7 @@ target_link_libraries(sponza-simulation PUBLIC
         vk-bootstrap::vk-bootstrap
         caldera::caldera)
 
-target_include_directories(sponza-simulation PUBLIC include/sponza)
+target_include_directories(sponza-simulation PUBLIC include/)
 
 set_target_properties(sponza-simulation PROPERTIES
         CXX_STANDARD 23
