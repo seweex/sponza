@@ -1,0 +1,14 @@
+[requires]
+stb/cci.20240531
+tinyobjloader/2.0.0-rc10
+vk-bootstrap/1.4.350
+glfw/3.4
+vulkan-memory-allocator/3.3.0
+caldera/0.0.1
+
+[generators]
+CMakeDeps
+CMakeToolchain
+
+[layout]
+cmake_layout
