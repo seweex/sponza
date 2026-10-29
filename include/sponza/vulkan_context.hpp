@@ -22,6 +22,9 @@ class VulkanContext {
     [[nodiscard]] vk::Queue get_queue(uint32_t family) const noexcept;
 
     [[nodiscard]] vk::SwapchainKHR get_swapchain() const noexcept;
+    [[nodiscard]] vk::Format get_swapchain_format() const noexcept;
+    [[nodiscard]] vk::Extent2D get_swapchain_extent() const noexcept;
+
     [[nodiscard]] std::span<vk::Image const> get_swapchain_images() const noexcept;
     [[nodiscard]] std::span<vk::ImageView const> get_swapchain_image_views() const noexcept;
 

@@ -108,7 +108,7 @@ make_swapchain(vkb::Device const &device, vk::SurfaceKHR const surface, vk::Exte
 namespace sponza {
 VulkanContext::VulkanContext() noexcept : m_instance(make_instance()) {}
 VulkanContext::~VulkanContext() noexcept {
-    for (auto const view: m_swapchainImageViews)
+    for (auto const view : m_swapchainImageViews)
         vkDestroyImageView(m_device.device, view, nullptr);
 
     vkb::destroy_swapchain(m_swapchain);
@@ -117,7 +117,7 @@ VulkanContext::~VulkanContext() noexcept {
     vkb::destroy_instance(m_instance);
 };
 
-vk::Result VulkanContext::init(GLFWwindow* const window, vk::Extent2D const extent) {
+vk::Result VulkanContext::init(GLFWwindow *const window, vk::Extent2D const extent) {
     auto surface = make_surface(m_instance.instance, window);
     if (!surface.has_value())
         return surface.error();
@@ -166,6 +166,10 @@ caldera::FamilyNumbers VulkanContext::get_family_indices() const noexcept {
 }
 vk::Queue VulkanContext::get_queue(uint32_t const family) const noexcept { return get_device().getQueue(family, 0); }
 vk::SwapchainKHR VulkanContext::get_swapchain() const noexcept { return m_swapchain.swapchain; }
+vk::Format VulkanContext::get_swapchain_format() const noexcept { return static_cast<vk::Format>(m_swapchain.image_format); }
+vk::Extent2D VulkanContext::get_swapchain_extent() const noexcept { return m_swapchain.extent; }
 std::span<vk::Image const> VulkanContext::get_swapchain_images() const noexcept { return m_swapchainImages; }
-std::span<vk::ImageView const> VulkanContext::get_swapchain_image_views() const noexcept { return m_swapchainImageViews; }
+std::span<vk::ImageView const> VulkanContext::get_swapchain_image_views() const noexcept {
+    return m_swapchainImageViews;
+}
 } // namespace sponza
