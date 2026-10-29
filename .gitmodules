@@ -1,0 +1,3 @@
+[submodule "external/shader-link"]
+	path = external/shader-link
+	url = https://github.com/seweex/shader-link
