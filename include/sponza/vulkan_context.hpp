@@ -21,6 +21,8 @@ class VulkanContext {
     [[nodiscard]] caldera::FamilyNumbers get_family_indices() const noexcept;
     [[nodiscard]] vk::Queue get_queue(uint32_t family) const noexcept;
 
+    [[nodiscard]] vk::SwapchainKHR get_swapchain() const noexcept;
+    [[nodiscard]] std::span<vk::Image const> get_swapchain_images() const noexcept;
     [[nodiscard]] std::span<vk::ImageView const> get_swapchain_image_views() const noexcept;
 
   private:
@@ -31,6 +33,7 @@ class VulkanContext {
     vkb::Device m_device;
 
     vkb::Swapchain m_swapchain;
+    std::vector<vk::Image> m_swapchainImages;
     std::vector<vk::ImageView> m_swapchainImageViews;
 };
 } // namespace sponza

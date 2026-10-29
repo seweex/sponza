@@ -30,9 +30,12 @@ find_package(caldera REQUIRED)
 # # # # #
 
 add_executable(sponza-simulation
+    src/scheduler.cpp
+    src/resource_factory.cpp
     src/vulkan_context.cpp
     src/window.cpp
-    src/main.cpp)
+    src/main.cpp
+    src/vma_impl.cpp)
 
 target_compile_definitions(sponza-simulation PUBLIC
     VULKAN_HPP_NO_EXCEPTIONS

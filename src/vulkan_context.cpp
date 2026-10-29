@@ -141,8 +141,14 @@ vk::Result VulkanContext::init(GLFWwindow* const window, vk::Extent2D const exte
         return swapchain.error();
 
     m_swapchain = *swapchain;
-    auto swapchainImageViews = swapchain->get_image_views();
 
+    auto swapchainImages = swapchain->get_images();
+    if (!swapchainImages.has_value())
+        return static_cast<vk::Result>(swapchainImages.vk_result());
+
+    m_swapchainImages.assign(swapchainImages->begin(), swapchainImages->end());
+
+    auto swapchainImageViews = swapchain->get_image_views();
     if (!swapchainImageViews.has_value())
         return static_cast<vk::Result>(swapchainImageViews.vk_result());
 
@@ -159,5 +165,7 @@ caldera::FamilyNumbers VulkanContext::get_family_indices() const noexcept {
             .compute = *m_device.get_queue_index(vkb::QueueType::compute)};
 }
 vk::Queue VulkanContext::get_queue(uint32_t const family) const noexcept { return get_device().getQueue(family, 0); }
+vk::SwapchainKHR VulkanContext::get_swapchain() const noexcept { return m_swapchain.swapchain; }
+std::span<vk::Image const> VulkanContext::get_swapchain_images() const noexcept { return m_swapchainImages; }
 std::span<vk::ImageView const> VulkanContext::get_swapchain_image_views() const noexcept { return m_swapchainImageViews; }
 } // namespace sponza
