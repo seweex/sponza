@@ -2,3 +2,6 @@
 .obsidian
 build
 CMakeUserPresets.json
+
+src/old
+include/sponza-old

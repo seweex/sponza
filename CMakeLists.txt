@@ -29,7 +29,10 @@ find_package(caldera REQUIRED)
 
 # # # # #
 
-add_executable(sponza-simulation src/main.cpp)
+add_executable(sponza-simulation
+        src/main.cpp
+        src/utility.cpp
+        src/context.cpp)
 
 target_compile_definitions(sponza-simulation PUBLIC VULKAN_HPP_NO_EXCEPTIONS)
 target_link_libraries(sponza-simulation PUBLIC
@@ -40,7 +43,7 @@ target_link_libraries(sponza-simulation PUBLIC
         vk-bootstrap::vk-bootstrap
         caldera::caldera)
 
-target_include_directories(sponza-simulation PUBLIC include/sponza)
+target_include_directories(sponza-simulation PUBLIC include)
 
 set_target_properties(sponza-simulation PROPERTIES
         CXX_STANDARD 23

@@ -25,6 +25,8 @@ class Context {
 
     vkb::PhysicalDevice m_physicalDevice;
     vkb::Device m_device;
+
+    vk::Extent2D m_extent;
     caldera::FamilyNumbers m_families;
 
     vkb::Swapchain m_swapchain;

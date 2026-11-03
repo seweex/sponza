@@ -1,4 +1,5 @@
+#include <sponza/context.hpp>
 
-#include <iostream>
-#include <caldera/caldera.hpp>
-
+int main() {
+    sponza::Context ctx;
+}
