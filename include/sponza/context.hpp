@@ -1,0 +1,37 @@
+#pragma once
+
+#include <VkBootstrap.h>
+#include <vulkan/vulkan.hpp>
+#include <GLFW/glfw3.h>
+
+#include <caldera/structs.hpp>
+#include <vector>
+
+namespace sponza {
+class Context {
+  public:
+    Context();
+    ~Context() noexcept;
+
+  private:
+    struct WindowDeleter {
+        void operator()(GLFWwindow*) const noexcept;
+    };
+
+    vkb::Instance m_instance;
+
+    std::unique_ptr<GLFWwindow, WindowDeleter> m_window;
+    vk::SurfaceKHR m_surface;
+
+    vkb::PhysicalDevice m_physicalDevice;
+    vkb::Device m_device;
+    caldera::FamilyNumbers m_families;
+
+    vkb::Swapchain m_swapchain;
+    std::vector<vk::Image> m_swapchainImages;
+    std::vector<vk::ImageView> m_swapchainImageViews;
+
+    friend class Resources;
+    friend class Renderer;
+};
+} // namespace sponza
