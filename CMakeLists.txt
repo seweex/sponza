@@ -35,7 +35,8 @@ add_executable(sponza-simulation
         src/vma_impl.cpp
         src/utility.cpp
         src/context.cpp
-        src/renderer.cpp)
+        src/renderer.cpp
+        src/resources.cpp)
 
 target_compile_definitions(sponza-simulation PUBLIC VULKAN_HPP_NO_EXCEPTIONS)
 target_link_libraries(sponza-simulation PUBLIC
