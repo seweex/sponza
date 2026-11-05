@@ -58,3 +58,26 @@ set_target_properties(sponza-simulation PROPERTIES
         CXX_STANDARD_REQUIRED ON
         CXX_EXTENSIONS OFF
         COMPILE_WARNING_AS_ERROR ON)
+
+# # # # #
+
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+execute_process(
+    COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive external/shader-link
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMAND_ERROR_IS_FATAL ANY)
+
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/compiled-shaders/${TARGET_NAME}")
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/include/sponza/shaders/compiled")
+
+add_custom_target(sponza-shader-compilation
+        COMMAND Python3::Interpreter -m shader_link
+        --input  "${CMAKE_CURRENT_LIST_DIR}/include/sponza/shaders/src"
+        --output "${CMAKE_BINARY_DIR}/compiled-shaders/${TARGET_NAME}"
+        --export "${CMAKE_CURRENT_LIST_DIR}/include/sponza/shaders/compiled"
+        --args   "-O --target-env=vulkan1.4"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/external/shader-link"
+        VERBATIM)
+
+add_dependencies(sponza-simulation sponza-shader-compilation)

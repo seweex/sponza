@@ -1,0 +1,21 @@
+#version 450
+
+layout(location = 0) in vec3 inPosition;
+layout(location = 1) in vec3 inNormal;
+layout(location = 2) in vec2 inTexcoord;
+
+layout(location = 0) out vec3 fragColor;
+
+void main() {
+    mat4 mvp = mat4(
+        1.3579,  0.0,     0.0,     0.0,
+        0.0,     2.4142,  0.0,     0.0,
+        0.0,     0.0,    -1.0020, -1.0,
+        0.0,     0.0,     3.3068,  3.5
+    );
+
+    gl_Position = mvp * vec4(inPosition, 1.0);
+    fragColor.x = exp(gl_Position.x);
+    fragColor.y = exp(gl_Position.y);
+    fragColor.z = exp(gl_Position.z);
+}
