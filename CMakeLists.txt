@@ -32,7 +32,8 @@ find_package(caldera REQUIRED)
 add_executable(sponza-simulation
         src/main.cpp
         src/utility.cpp
-        src/context.cpp)
+        src/context.cpp
+        src/renderer.cpp)
 
 target_compile_definitions(sponza-simulation PUBLIC VULKAN_HPP_NO_EXCEPTIONS)
 target_link_libraries(sponza-simulation PUBLIC
