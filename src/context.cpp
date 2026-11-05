@@ -92,6 +92,19 @@ constexpr uint32_t swapchain_image_count = 3;
     return *result;
 }
 
+[[nodiscard]] VmaAllocator make_allocator(vkb::Instance const& instance, vkb::PhysicalDevice const& physicalDevice, vkb::Device const& device) {
+    VmaAllocatorCreateInfo createInfo{};
+    createInfo.vulkanApiVersion = VK_MAKE_API_VERSION(0, vulkan_version_major, vulkan_version_minor, vulkan_version_patch);
+    createInfo.instance = instance.instance;
+    createInfo.physicalDevice = physicalDevice.physical_device;
+    createInfo.device = device.device;
+
+    VmaAllocator allocator{};
+    sponza::detail::validate(vmaCreateAllocator(&createInfo, &allocator), "failed to create an allocator");
+
+    return allocator;
+}
+
 [[nodiscard]] caldera::FamilyNumbers get_families(vkb::Device const &device) {
     auto const graphicsIdx = device.get_queue_index(vkb::QueueType::graphics);
     auto const transferIdx = device.get_queue_index(vkb::QueueType::transfer);
@@ -146,7 +159,9 @@ namespace sponza {
 Context::Context()
     : m_instance(make_instance()), m_window(make_window()),
       m_surface(make_surface(m_instance.instance, m_window.get())),
-      m_physicalDevice(choose_physical_device(m_instance, m_surface)), m_device(make_device(m_physicalDevice)),
+      m_physicalDevice(choose_physical_device(m_instance, m_surface)),
+      m_device(make_device(m_physicalDevice)),
+      m_allocator(make_allocator(m_instance, m_physicalDevice, m_device)),
       m_extent(get_framebuffer_extent(m_window.get())), m_families(get_families(m_device)),
       m_swapchain(make_swapchain(m_device, m_surface, m_extent)), m_swapchainImages(get_swapchain_images(m_swapchain)),
       m_swapchainImageViews(get_swapchain_image_views(m_swapchain)) {}
@@ -157,6 +172,7 @@ Context::~Context() noexcept {
             device.destroyImageView(view);
 
         vkb::destroy_swapchain(m_swapchain);
+        vmaDestroyAllocator(m_allocator);
         vkb::destroy_device(m_device);
         vkDestroySurfaceKHR(m_instance.instance, m_surface, nullptr);
         m_window.reset();

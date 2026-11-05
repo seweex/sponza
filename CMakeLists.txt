@@ -22,6 +22,7 @@ find_package(glfw3 REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(VulkanMemoryAllocator REQUIRED)
 find_package(stb REQUIRED)
+find_package(glm REQUIRED)
 find_package(tinyobjloader REQUIRED)
 find_package(vk-bootstrap REQUIRED)
 
@@ -31,6 +32,7 @@ find_package(caldera REQUIRED)
 
 add_executable(sponza-simulation
         src/main.cpp
+        src/vma_impl.cpp
         src/utility.cpp
         src/context.cpp
         src/renderer.cpp)
@@ -42,6 +44,7 @@ target_link_libraries(sponza-simulation PUBLIC
         stb::stb
         tinyobjloader::tinyobjloader
         vk-bootstrap::vk-bootstrap
+        glm::glm-header-only
         caldera::caldera)
 
 target_include_directories(sponza-simulation PUBLIC include)

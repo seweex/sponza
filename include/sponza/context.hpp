@@ -2,6 +2,7 @@
 
 #include <VkBootstrap.h>
 #include <vulkan/vulkan.hpp>
+#include <vk_mem_alloc.h>
 #include <GLFW/glfw3.h>
 
 #include <caldera/structs.hpp>
@@ -25,6 +26,7 @@ class Context {
 
     vkb::PhysicalDevice m_physicalDevice;
     vkb::Device m_device;
+    VmaAllocator m_allocator;
 
     vk::Extent2D m_extent;
     caldera::FamilyNumbers m_families;
