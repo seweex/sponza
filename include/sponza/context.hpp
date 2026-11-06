@@ -37,5 +37,6 @@ class Context {
 
     friend class Resources;
     friend class Renderer;
+    friend class Pipeline;
 };
 } // namespace sponza

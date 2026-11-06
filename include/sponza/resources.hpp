@@ -26,5 +26,7 @@ class Resources {
 
     vk::Buffer m_vbo;
     vk::Buffer m_ibo;
+
+    friend class Pipeline;
 };
 } // namespace sponza
