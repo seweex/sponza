@@ -8,4 +8,10 @@ int main() {
     sponza::Renderer renderer{ ctx };
     sponza::Resources resources{ ctx };
     sponza::Pipeline pipeline{ ctx, resources };
+
+    while (!ctx.closing()) {
+        sponza::Context::poll_events();
+
+        renderer.process_frame(pipeline);
+    }
 }

@@ -15,7 +15,7 @@ void main() {
     );
 
     gl_Position = mvp * vec4(inPosition, 1.0);
-    fragColor.x = exp(gl_Position.x);
-    fragColor.y = exp(gl_Position.y);
-    fragColor.z = exp(gl_Position.z);
+    fragColor.x = exp(gl_Position.x - inNormal.x - 0.2 * inTexcoord.x);
+    fragColor.y = exp(gl_Position.y - inNormal.y - 0.2 * inTexcoord.y);
+    fragColor.z = exp(gl_Position.z - inNormal.z - 0.2 * inTexcoord.x);
 }

@@ -42,6 +42,16 @@ PipelineBuilder &PipelineBuilder::vertex_attribute(uint32_t const location, uint
     return *this;
 }
 
+PipelineBuilder &PipelineBuilder::viewport(vk::Viewport const viewport) noexcept {
+    m_viewport = viewport;
+    return *this;
+}
+
+PipelineBuilder &PipelineBuilder::scissors(vk::Rect2D const scissors) noexcept {
+    m_scissors = scissors;
+    return *this;
+}
+
 PipelineBuilder &PipelineBuilder::topology(vk::PrimitiveTopology const topology, bool const primitiveRestart) noexcept {
     m_topology = topology;
     m_primitiveRestart = primitiveRestart;
@@ -160,7 +170,7 @@ vk::Pipeline PipelineBuilder::build_graphics(vk::Device const device) const {
     vk::PipelineInputAssemblyStateCreateInfo const inputAssembly{
         {}, m_topology, m_primitiveRestart ? vk::True : vk::False};
 
-    vk::PipelineViewportStateCreateInfo const viewport{{}, 1, nullptr, 1, nullptr};
+    vk::PipelineViewportStateCreateInfo const viewport{{}, 1, &m_viewport, 1, &m_scissors};
 
     vk::PipelineRasterizationStateCreateInfo rasterization{};
     rasterization.depthClampEnable = m_depthClamp ? vk::True : vk::False;
@@ -183,7 +193,7 @@ vk::Pipeline PipelineBuilder::build_graphics(vk::Device const device) const {
     colorBlend.attachmentCount = static_cast<uint32_t>(m_blendStates.size());
     colorBlend.pAttachments = m_blendStates.data();
 
-    std::vector dynamicStates{vk::DynamicState::eViewport, vk::DynamicState::eScissor};
+    std::vector<vk::DynamicState> dynamicStates{};
     for (auto const state : m_dynamicStates)
         if (std::ranges::find(dynamicStates, state) == dynamicStates.end())
             dynamicStates.push_back(state);

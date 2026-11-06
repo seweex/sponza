@@ -45,7 +45,8 @@ namespace {
 
 /* * * * */
 
-[[nodiscard]] sponza::detail::PassData make_forward_pass_data(vk::Device const device, vk::PipelineCache const cache) {
+[[nodiscard]] sponza::detail::PassData make_forward_pass_data(vk::Device const device, vk::Extent2D const framebuffer,
+                                                              vk::PipelineCache const cache) {
     sponza::detail::PassData data;
 
     auto const vertShader =
@@ -61,16 +62,18 @@ namespace {
             .layout(data.pipelineLayout)
             .shader(vk::ShaderStageFlagBits::eVertex, vertShader)
             .shader(vk::ShaderStageFlagBits::eFragment, fragShader)
+            .viewport({ 0.f, 0.f, static_cast<float>(framebuffer.width), static_cast<float>(framebuffer.height), 0.f, 1.f })
+            .scissors({vk::Offset2D{0, 0}, framebuffer})
             .vertex_binding(0, sizeof(sponza::Resources::Vertex))
             .vertex_attribute(0, 0, vk::Format::eR32G32B32Sfloat, offsetof(sponza::Resources::Vertex, position))
             .vertex_attribute(1, 0, vk::Format::eR32G32B32Sfloat, offsetof(sponza::Resources::Vertex, normal))
             .vertex_attribute(2, 0, vk::Format::eR32G32Sfloat, offsetof(sponza::Resources::Vertex, texcoord))
-            .cull_mode(vk::CullModeFlagBits::eBack)
+            .cull_mode(vk::CullModeFlagBits::eBack, vk::FrontFace::eClockwise)
             .color_attachment(vk::Format::eB8G8R8A8Srgb, sponza::detail::PipelineBuilder::alpha_blend())
             .depth_attachment(vk::Format::eD32Sfloat)
             .build_graphics(device);
 
-    // device.destroyShaderModule(vertShader);
+    device.destroyShaderModule(vertShader);
     device.destroyShaderModule(fragShader);
 
     return data;
@@ -150,8 +153,9 @@ Pipeline::Pipeline(Context &ctx, Resources &resources)
 
     auto const swapchainImageID = m_resources.map(vk::Image{VK_NULL_HANDLE});
     ids.outImageID = m_resources.map(swapchainImageID, vk::ImageView{VK_NULL_HANDLE});
+    m_swapchainImageID = ids.outImageID;
 
-    auto const &forwardPassData = m_passes.emplace_back(make_forward_pass_data(device, m_pipelineCache));
+    auto const &forwardPassData = m_passes.emplace_back(make_forward_pass_data(device, m_context->m_extent, m_pipelineCache));
 
     caldera::GraphDeclarator declarator{};
     declare_forward_pass(declarator, ids, forwardPassData);
@@ -161,6 +165,10 @@ Pipeline::Pipeline(Context &ctx, Resources &resources)
 
     detail::validate(graph.has_value(), "failed to create render graph");
     m_graph = std::move(*graph);
+
+    caldera::GraphProperties properties{m_graph};
+    m_properties.imageAvailableSyncPoint = properties.find_image_acquire_sync_point(m_swapchainImageID.image);
+    m_properties.renderFinishedSyncPoint = properties.find_render_finished_sync_point(m_swapchainImageID.image);
 }
 
 Pipeline::~Pipeline() noexcept {

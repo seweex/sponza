@@ -14,6 +14,9 @@ class Context {
     Context();
     ~Context() noexcept;
 
+    [[nodiscard]] bool closing() noexcept;
+    static void poll_events() noexcept;
+
   private:
     struct WindowDeleter {
         void operator()(GLFWwindow*) const noexcept;

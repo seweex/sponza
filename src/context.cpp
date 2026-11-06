@@ -182,6 +182,9 @@ Context::~Context() noexcept {
     }
 }
 
+bool Context::closing() noexcept { return glfwWindowShouldClose(m_window.get()); }
+void Context::poll_events() noexcept { glfwPollEvents(); }
+
 void Context::WindowDeleter::operator()(GLFWwindow *const handle) const noexcept { glfwDestroyWindow(handle); }
 
 } // namespace sponza

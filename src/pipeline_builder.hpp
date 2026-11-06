@@ -19,6 +19,9 @@ class PipelineBuilder {
                                     vk::VertexInputRate rate = vk::VertexInputRate::eVertex);
     PipelineBuilder &vertex_attribute(uint32_t location, uint32_t binding, vk::Format format, uint32_t offset);
 
+    PipelineBuilder &viewport(vk::Viewport viewport) noexcept;
+    PipelineBuilder &scissors(vk::Rect2D scissors) noexcept;
+
     PipelineBuilder &topology(vk::PrimitiveTopology topology, bool primitiveRestart = false) noexcept;
     PipelineBuilder &polygon_mode(vk::PolygonMode mode) noexcept;
     PipelineBuilder &cull_mode(vk::CullModeFlags cull, vk::FrontFace front = vk::FrontFace::eCounterClockwise) noexcept;
@@ -64,6 +67,9 @@ class PipelineBuilder {
     vk::FrontFace m_frontFace = vk::FrontFace::eCounterClockwise;
     float m_lineWidth = 1.0f;
     bool m_depthClamp = false;
+
+    vk::Viewport m_viewport{0.f, 0.f, 0.f, 0.f, 0.f, 1.f};
+    vk::Rect2D m_scissors{vk::Offset2D{0, 0}, vk::Extent2D{0, 0}};
 
     bool m_depthTest = false;
     bool m_depthWrite = false;
