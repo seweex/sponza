@@ -14,8 +14,8 @@ void main() {
             vec4(-0.143306,  0.601240,  3.867736,  3.96)
     );
 
+    const vec3 eyePos = vec3(3.96, 1.18, 0.50);
+
     gl_Position = u_MVP * vec4(inPosition, 1.0);
-    fragColor.x = inTexcoord.x;
-    fragColor.y = inTexcoord.y;
-    fragColor.z = 0;
+    fragColor = vec3(log(distance(eyePos, inPosition)) / log(100));
 }
