@@ -7,15 +7,15 @@ layout(location = 2) in vec2 inTexcoord;
 layout(location = 0) out vec3 fragColor;
 
 void main() {
-    mat4 mvp = mat4(
-        1.3579,  0.0,     0.0,     0.0,
-        0.0,     2.4142,  0.0,     0.0,
-        0.0,     0.0,    -1.0020, -1.0,
-        0.0,     0.0,     3.3068,  3.5
+    const mat4 u_MVP = mat4(
+            vec4( 0.0,       0.0,      -1.002004, -1.0),
+            vec4( 0.0,      -0.509525,  0.0,       0.0),
+            vec4( 0.286612,  0.0,       0.0,       0.0),
+            vec4(-0.143306,  0.601240,  3.867736,  3.96)
     );
 
-    gl_Position = mvp * vec4(inPosition, 1.0);
-    fragColor.x = exp(gl_Position.x - inNormal.x - 0.2 * inTexcoord.x);
-    fragColor.y = exp(gl_Position.y - inNormal.y - 0.2 * inTexcoord.y);
-    fragColor.z = exp(gl_Position.z - inNormal.z - 0.2 * inTexcoord.x);
+    gl_Position = u_MVP * vec4(inPosition, 1.0);
+    fragColor.x = inTexcoord.x;
+    fragColor.y = inTexcoord.y;
+    fragColor.z = 0;
 }
