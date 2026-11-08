@@ -9,8 +9,6 @@
 
 namespace sponza::detail {
 struct PassData {
-    std::vector<vk::ShaderModule> shaderModules;
-
     std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
     vk::DescriptorPool descriptorPool;
 
@@ -23,6 +21,7 @@ struct PassData {
 struct GraphProperties {
     caldera::SemaphoreSyncPoint imageAvailableSyncPoint;
     caldera::SemaphoreSyncPoint renderFinishedSyncPoint;
+    std::unordered_map<uint32_t, uint32_t> familyPassCount;
 };
 } // namespace sponza::detail
 

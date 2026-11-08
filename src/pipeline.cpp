@@ -49,10 +49,8 @@ namespace {
                                                               vk::PipelineCache const cache) {
     sponza::detail::PassData data;
 
-    auto const vertShader =
-        data.shaderModules.emplace_back(create_shader_module(device, shader_link_compiled::spv_forward_vert));
-    auto const fragShader =
-        data.shaderModules.emplace_back(create_shader_module(device, shader_link_compiled::spv_forward_frag));
+    auto const vertShader = create_shader_module(device, shader_link_compiled::spv_forward_vert);
+    auto const fragShader = create_shader_module(device, shader_link_compiled::spv_forward_frag);
 
     sponza::detail::PipelineBuilder builder;
 
@@ -79,6 +77,10 @@ namespace {
     return data;
 }
 
+[[nodiscard]] sponza::detail::PassData make_present_pass_data() noexcept {
+    return {};
+}
+
 void destroy_pass_data(vk::Device const device, sponza::detail::PassData const &data) {
     for (auto &descriptorSetLayout : data.descriptorSetLayouts)
         device.destroyDescriptorSetLayout(descriptorSetLayout);
@@ -91,28 +93,30 @@ void destroy_pass_data(vk::Device const device, sponza::detail::PassData const &
 /* * * * */
 
 struct GraphResourceIDs {
-    caldera::BufferID vboID;
-    caldera::BufferID iboID;
-    caldera::ImageViewID outImageID;
+    caldera::BufferVersion vbo;
+    caldera::BufferVersion ibo;
+
+    caldera::ImageVersion outImage;
+    caldera::ImageViewID outView;
 };
 
-void declare_forward_pass(caldera::GraphDeclarator &declarator, GraphResourceIDs const &ids,
+void declare_forward_pass(caldera::GraphDeclarator &declarator, GraphResourceIDs &ids,
                           sponza::detail::PassData const &passData) {
     declarator.add_pass(
         "forward-pass", caldera::FamilyType::graphics,
         [&](caldera::PassDeclarator &pass) {
-            pass.read(ids.vboID, caldera::BufferUsage::vertices);
-            pass.read(ids.iboID, caldera::BufferUsage::indices);
+            pass.read(ids.vbo, caldera::BufferUsage::vertices);
+            pass.read(ids.ibo, caldera::BufferUsage::indices);
 
-            pass.write(ids.outImageID.image, caldera::ImageUsage::color_attachment);
+            ids.outImage = pass.write(ids.outImage, caldera::ImageUsage::color_attachment);
         },
-        [=](vk::CommandBuffer const cmd, caldera::ResourceMap const &rMap) {
+        [ids, ppl = passData.pipeline] (vk::CommandBuffer const cmd, caldera::ResourceMap const &rMap) {
             vk::DeviceSize constexpr zero_offset = 0;
             uint32_t constexpr index_count = 3 * 6 * 2;
 
-            auto const vbo = rMap.at(ids.vboID);
-            auto const ibo = rMap.at(ids.iboID);
-            auto const outImage = rMap.at(ids.outImageID);
+            auto const vbo = rMap.at(ids.vbo.id);
+            auto const ibo = rMap.at(ids.ibo.id);
+            auto const outImage = rMap.at(ids.outView);
 
             vk::RenderingAttachmentInfo colorAttachment{};
             colorAttachment.clearValue = vk::ClearColorValue{1.f, 0.7f, 1.f, 1.f};
@@ -132,12 +136,21 @@ void declare_forward_pass(caldera::GraphDeclarator &declarator, GraphResourceIDs
             cmd.bindVertexBuffers(0, 1, &vbo, &zero_offset);
             cmd.bindIndexBuffer(ibo, zero_offset, vk::IndexType::eUint32);
 
-            cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, passData.pipeline);
+            cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, ppl);
 
             cmd.drawIndexed(index_count, 1, 0, 0, 0);
 
             cmd.endRendering();
         });
+}
+
+void declare_present_pass(caldera::GraphDeclarator &declarator, GraphResourceIDs const &ids) {
+    declarator.add_pass(
+        "present-pass", caldera::FamilyType::graphics,
+        [&](caldera::PassDeclarator &pass) {
+            pass.read(ids.outImage, caldera::ImageUsage::present);
+        },
+        [=](vk::CommandBuffer const, caldera::ResourceMap const &) {});
 }
 } // namespace
 
@@ -148,17 +161,20 @@ Pipeline::Pipeline(Context &ctx, Resources &resources)
     auto const device = static_cast<vk::Device>(m_context->m_device.device);
 
     GraphResourceIDs ids{};
-    ids.vboID = m_resources.map(resources.m_vbo);
-    ids.iboID = m_resources.map(resources.m_ibo);
+    ids.vbo = m_resources.map(resources.m_vbo);
+    ids.ibo = m_resources.map(resources.m_ibo);
 
     auto const swapchainImageID = m_resources.map(vk::Image{VK_NULL_HANDLE});
-    ids.outImageID = m_resources.map(swapchainImageID, vk::ImageView{VK_NULL_HANDLE});
-    m_swapchainImageID = ids.outImageID;
+    ids.outView = m_resources.map(swapchainImageID, vk::ImageView{VK_NULL_HANDLE});
+    m_swapchainImageID = ids.outView;
 
-    auto const &forwardPassData = m_passes.emplace_back(make_forward_pass_data(device, m_context->m_extent, m_pipelineCache));
+    m_passes.reserve(2);
+    auto const& forwardPassData = m_passes.emplace_back(make_forward_pass_data(device, m_context->m_extent, m_pipelineCache));
+    m_passes.emplace_back(make_present_pass_data());
 
     caldera::GraphDeclarator declarator{};
     declare_forward_pass(declarator, ids, forwardPassData);
+    declare_present_pass(declarator, ids);
 
     auto const ir = std::move(declarator).extract();
     auto graph = caldera::RenderGraph::create(device, m_context->m_allocator, m_context->m_families, ir);
@@ -169,19 +185,20 @@ Pipeline::Pipeline(Context &ctx, Resources &resources)
     caldera::GraphProperties properties{m_graph};
     m_properties.imageAvailableSyncPoint = properties.find_image_acquire_sync_point(m_swapchainImageID.image);
     m_properties.renderFinishedSyncPoint = properties.find_render_finished_sync_point(m_swapchainImageID.image);
+
+    m_properties.familyPassCount.reserve(3);
+    auto const passCounts = properties.get_pass_counts_per_families();
+
+    for (auto const [familyIdx, passCount] : passCounts)
+        m_properties.familyPassCount[familyIdx] += passCount;
 }
 
 Pipeline::~Pipeline() noexcept {
     if (auto const device = static_cast<vk::Device>(m_context->m_device.device)) {
-        for (auto &pass : m_passes) {
-            device.destroyDescriptorPool(pass.descriptorPool);
+        (void)device.waitIdle();
 
-            for (auto const layout : pass.descriptorSetLayouts)
-                device.destroyDescriptorSetLayout(layout);
-
-            device.destroyPipelineLayout(pass.pipelineLayout);
-            device.destroyPipeline(pass.pipeline);
-        }
+        for (auto &pass : m_passes)
+            destroy_pass_data(device, pass);
 
         device.destroyPipelineCache(m_pipelineCache);
     }
