@@ -1,6 +1,7 @@
 #include "utility.hpp"
 #include <sponza/renderer.hpp>
 
+#include <iostream>
 #include <ranges>
 
 namespace {
@@ -98,6 +99,7 @@ void destroy_timeline_semaphores(vk::Device const device,
 
 [[nodiscard]] uint32_t begin_frame(vk::Device const device, vk::SwapchainKHR const swapchain,
                                    sponza::detail::FrameData const &frameData) {
+    std::cout << "[[[ BEGINNING A FRAME ]]]" << std::endl;
     uint32_t imageIdx;
     sponza::detail::validate(
         device.acquireNextImageKHR(swapchain, UINT64_MAX, frameData.imageAvailableSemaphore, nullptr, &imageIdx),
@@ -115,6 +117,7 @@ void end_frame(vk::Queue const presentQueue, vk::SwapchainKHR const swapchain, u
                sponza::detail::FrameData const &frameData) {
     sponza::detail::validate(presentQueue.presentKHR({frameData.renderFinishedSemaphore, swapchain, imageIdx}),
                              "failed to present image");
+    std::cout << "[[[ ENDED A FRAME ]]]" << std::endl;
 }
 } // namespace
 
@@ -165,7 +168,7 @@ void Renderer::process_frame(Pipeline &pipeline) {
     auto const device = static_cast<vk::Device>(m_context->m_device.device);
     auto const swapchain = static_cast<vk::SwapchainKHR>(m_context->m_swapchain.swapchain);
 
-    auto const frameIdx = m_frameCount++ % frames_inflight;
+    auto const frameIdx = (m_frameCount++) % frames_inflight;
     auto &frameData = m_frameData[frameIdx];
 
     auto const imageIdx = begin_frame(device, swapchain, frameData);
@@ -232,7 +235,9 @@ void Renderer::process_frame(Pipeline &pipeline) {
             "failed to submit command buffer");
     }
 
+    for (auto &semaphore : m_familySemaphores | std::views::values)
+        semaphore.timeline += graph->passes.size();
+
     end_frame(m_queues[families.graphics], swapchain, imageIdx, frameData);
-    ++m_frameCount;
 }
 } // namespace sponza

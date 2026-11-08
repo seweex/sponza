@@ -9,8 +9,6 @@
 
 namespace sponza::detail {
 struct PassData {
-    std::vector<vk::ShaderModule> shaderModules;
-
     std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
     vk::DescriptorPool descriptorPool;
 
