@@ -8,7 +8,7 @@
 #include <vector>
 
 namespace {
-constexpr const char *mesh_path = "assets/cube.obj";
+constexpr const char *mesh_path = "assets/atrium.obj";
 
 struct MeshData {
     std::vector<sponza::Resources::Vertex> vertices;

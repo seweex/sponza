@@ -10,8 +10,8 @@ constexpr uint32_t vulkan_version_major = 1;
 constexpr uint32_t vulkan_version_minor = 3;
 constexpr uint32_t vulkan_version_patch = 0;
 
-constexpr uint32_t window_width = 800;
-constexpr uint32_t window_height = 600;
+constexpr uint32_t window_width = 1600;
+constexpr uint32_t window_height = 900;
 constexpr const char *window_title = "Sponza - Simulation";
 
 constexpr uint32_t swapchain_image_count = 3;
@@ -54,6 +54,7 @@ constexpr uint32_t swapchain_image_count = 3;
 [[nodiscard]] vkb::PhysicalDevice choose_physical_device(vkb::Instance const &instance, vk::SurfaceKHR const surface) {
     vk::PhysicalDeviceFeatures features_10{};
     features_10.samplerAnisotropy = VK_TRUE;
+    features_10.fillModeNonSolid = VK_TRUE;
 
     vk::PhysicalDeviceVulkan12Features features_12{};
     features_12.timelineSemaphore = VK_TRUE;
