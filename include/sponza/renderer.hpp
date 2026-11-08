@@ -8,7 +8,6 @@
 namespace sponza::detail {
 struct FrameData {
     vk::Semaphore imageAvailableSemaphore;
-    vk::Semaphore renderFinishedSemaphore;
 
     vk::Fence inflighFence;
 
@@ -20,6 +19,8 @@ struct FrameData {
 struct ImageData {
     vk::Image image;
     vk::ImageView view;
+
+    vk::Semaphore renderFinishedSemaphore;
 };
 
 struct TimelineSemaphores {

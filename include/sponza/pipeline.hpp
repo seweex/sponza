@@ -21,6 +21,7 @@ struct PassData {
 struct GraphProperties {
     caldera::SemaphoreSyncPoint imageAvailableSyncPoint;
     caldera::SemaphoreSyncPoint renderFinishedSyncPoint;
+    std::unordered_map<uint32_t, uint32_t> familyPassCount;
 };
 } // namespace sponza::detail
 

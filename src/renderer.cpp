@@ -52,7 +52,6 @@ constexpr uint32_t command_buffer_count = 10;
     sponza::detail::FrameData frameData;
 
     frameData.imageAvailableSemaphore = make_semaphore(device, false);
-    frameData.renderFinishedSemaphore = make_semaphore(device, false);
     frameData.inflighFence = make_fence(device, true);
 
     frameData.familyCommandPools[families.graphics] = make_command_pool(device, families.graphics);
@@ -65,6 +64,17 @@ constexpr uint32_t command_buffer_count = 10;
     }
 
     return frameData;
+}
+
+[[nodiscard]] sponza::detail::ImageData make_image_data(vk::Device const device, vk::Image const image,
+                                                        vk::ImageView const view) {
+    sponza::detail::ImageData imageData;
+
+    imageData.image = image;
+    imageData.view = view;
+
+    imageData.renderFinishedSemaphore = make_semaphore(device, false);
+    return imageData;
 }
 
 [[nodiscard]] sponza::detail::TimelineSemaphores make_timeline_semaphores(vk::Device const device) {
@@ -81,12 +91,16 @@ constexpr uint32_t command_buffer_count = 10;
 void destroy_frame_data(vk::Device const device, sponza::detail::FrameData const &frameData) {
     if (device) {
         device.destroySemaphore(frameData.imageAvailableSemaphore);
-        device.destroySemaphore(frameData.renderFinishedSemaphore);
         device.destroyFence(frameData.inflighFence);
 
         for (auto const &pool : frameData.familyCommandPools | std::views::values)
             device.destroyCommandPool(pool);
     }
+}
+
+void destroy_image_data(vk::Device const device, sponza::detail::ImageData const &imageData) {
+    if (device)
+        device.destroySemaphore(imageData.renderFinishedSemaphore);
 }
 
 void destroy_timeline_semaphores(vk::Device const device,
@@ -98,32 +112,43 @@ void destroy_timeline_semaphores(vk::Device const device,
 /* * * * */
 
 [[nodiscard]] uint32_t begin_frame(vk::Device const device, vk::SwapchainKHR const swapchain,
-                                   sponza::detail::FrameData const &frameData) {
+                                   sponza::detail::FrameData const &frameData, auto const &familySemaphores) {
     std::cout << "[[[ BEGINNING A FRAME ]]]" << std::endl;
+
+    std::array<vk::Semaphore, 3> semaphores = {};
+    std::array<uint64_t, 3> values = {};
+
+    uint32_t waitCount = 0;
+
+    for (auto const &semaphore : familySemaphores | std::views::values) {
+        semaphores[waitCount] = semaphore.semaphore;
+        values[waitCount] = semaphore.timeline - 1;
+        ++waitCount;
+    }
+
+    assert(waitCount <= semaphores.size());
+    vk::SemaphoreWaitInfo const waitInfo{{}, waitCount, semaphores.data(), values.data()};
+
+    sponza::detail::validate(device.waitSemaphores(waitInfo, UINT64_MAX), "failed to wait for semaphores");
+
     uint32_t imageIdx;
     sponza::detail::validate(
         device.acquireNextImageKHR(swapchain, UINT64_MAX, frameData.imageAvailableSemaphore, nullptr, &imageIdx),
         "failed to acquire swapchain index");
 
-    sponza::detail::validate(device.waitForFences(frameData.inflighFence, vk::True, UINT64_MAX),
-                             "failed to wait for fence");
-
-    sponza::detail::validate(device.resetFences(frameData.inflighFence), "failed to reset the fence");
-
     return imageIdx;
 }
 
 void end_frame(vk::Queue const presentQueue, vk::SwapchainKHR const swapchain, uint32_t const imageIdx,
-               sponza::detail::FrameData const &frameData) {
-    sponza::detail::validate(presentQueue.presentKHR({frameData.renderFinishedSemaphore, swapchain, imageIdx}),
+               sponza::detail::ImageData const &imageData) {
+    sponza::detail::validate(presentQueue.presentKHR({imageData.renderFinishedSemaphore, swapchain, imageIdx}),
                              "failed to present image");
     std::cout << "[[[ ENDED A FRAME ]]]" << std::endl;
 }
 } // namespace
 
 namespace sponza {
-Renderer::Renderer(Context const &ctx) : m_context(&ctx), m_frameCount(0)
-{
+Renderer::Renderer(Context const &ctx) : m_context(&ctx), m_frameCount(0) {
     auto const device = static_cast<vk::Device>(m_context->m_device.device);
     auto const families = m_context->m_families;
 
@@ -131,7 +156,8 @@ Renderer::Renderer(Context const &ctx) : m_context(&ctx), m_frameCount(0)
         m_frameData.emplace_back(make_frame_data(device, families, command_buffer_count));
 
     for (uint32_t i = 0; i < m_context->m_swapchainImages.size(); ++i)
-        m_imageData.emplace_back(m_context->m_swapchainImages[i], m_context->m_swapchainImageViews[i]);
+        m_imageData.emplace_back(
+            make_image_data(device, m_context->m_swapchainImages[i], m_context->m_swapchainImageViews[i]));
 
     auto const pushFamilySemaphores = [&](uint32_t const family) {
         if (auto const [iter, inserted] = m_familySemaphores.try_emplace(family); inserted)
@@ -155,23 +181,29 @@ Renderer::Renderer(Context const &ctx) : m_context(&ctx), m_frameCount(0)
 }
 
 Renderer::~Renderer() noexcept {
-    auto const device = static_cast<vk::Device>(m_context->m_device.device);
+    if (auto const device = static_cast<vk::Device>(m_context->m_device.device)) {
+        (void)device.waitIdle();
 
-    for (auto const &semaphore : m_familySemaphores | std::views::values)
-        destroy_timeline_semaphores(device, semaphore);
+        for (auto const &semaphore : m_familySemaphores | std::views::values)
+            destroy_timeline_semaphores(device, semaphore);
 
-    for (auto const &data : m_frameData)
-        destroy_frame_data(device, data);
+        for (auto const &data : m_imageData)
+            destroy_image_data(device, data);
+
+        for (auto const &data : m_frameData)
+            destroy_frame_data(device, data);
+    }
 }
 
 void Renderer::process_frame(Pipeline &pipeline) {
     auto const device = static_cast<vk::Device>(m_context->m_device.device);
     auto const swapchain = static_cast<vk::SwapchainKHR>(m_context->m_swapchain.swapchain);
+    auto const &properties = pipeline.m_properties;
 
     auto const frameIdx = (m_frameCount++) % frames_inflight;
     auto &frameData = m_frameData[frameIdx];
 
-    auto const imageIdx = begin_frame(device, swapchain, frameData);
+    auto const imageIdx = begin_frame(device, swapchain, frameData, m_familySemaphores);
     auto const &imageData = m_imageData[imageIdx];
 
     auto const families = m_context->m_families;
@@ -203,7 +235,6 @@ void Renderer::process_frame(Pipeline &pipeline) {
         m_cache.signalSemaphores.reserve(2);
 
         auto const queue = m_queues.at(pass.familyIdx);
-        auto const& properties = pipeline.m_properties;
 
         for (auto const &passDep : pass.passDependencies) {
             auto const otherPassFamily = graph->passes[passDep.otherPass].familyIdx;
@@ -220,7 +251,7 @@ void Renderer::process_frame(Pipeline &pipeline) {
                                               vk::PipelineStageFlagBits2::eAllCommands);
 
         if (auto const syncPoint = properties.renderFinishedSyncPoint; syncPoint.passIdx == passIdx)
-            m_cache.signalSemaphores.emplace_back(frameData.renderFinishedSemaphore, 0, syncPoint.flags);
+            m_cache.signalSemaphores.emplace_back(imageData.renderFinishedSemaphore, 0, syncPoint.flags);
 
         vk::CommandBufferSubmitInfo cmdInfo{};
         cmdInfo.commandBuffer = pass.commandBuffer;
@@ -230,14 +261,12 @@ void Renderer::process_frame(Pipeline &pipeline) {
         submitInfo.setSignalSemaphoreInfos(m_cache.signalSemaphores);
         submitInfo.setCommandBufferInfos(cmdInfo);
 
-        detail::validate(
-            queue.submit2(submitInfo, passIdx == graph->passes.size() - 1 ? frameData.inflighFence : VK_NULL_HANDLE),
-            "failed to submit command buffer");
+        detail::validate(queue.submit2(submitInfo), "failed to submit command buffer");
     }
 
-    for (auto &semaphore : m_familySemaphores | std::views::values)
-        semaphore.timeline += graph->passes.size();
+    for (auto const [familyIdx, passCount] : properties.familyPassCount)
+        m_familySemaphores[familyIdx].timeline += passCount;
 
-    end_frame(m_queues[families.graphics], swapchain, imageIdx, frameData);
+    end_frame(m_queues[families.graphics], swapchain, imageIdx, imageData);
 }
 } // namespace sponza

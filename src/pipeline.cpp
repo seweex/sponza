@@ -185,10 +185,18 @@ Pipeline::Pipeline(Context &ctx, Resources &resources)
     caldera::GraphProperties properties{m_graph};
     m_properties.imageAvailableSyncPoint = properties.find_image_acquire_sync_point(m_swapchainImageID.image);
     m_properties.renderFinishedSyncPoint = properties.find_render_finished_sync_point(m_swapchainImageID.image);
+
+    m_properties.familyPassCount.reserve(3);
+    auto const passCounts = properties.get_pass_counts_per_families();
+
+    for (auto const [familyIdx, passCount] : passCounts)
+        m_properties.familyPassCount[familyIdx] += passCount;
 }
 
 Pipeline::~Pipeline() noexcept {
     if (auto const device = static_cast<vk::Device>(m_context->m_device.device)) {
+        (void)device.waitIdle();
+
         for (auto &pass : m_passes)
             destroy_pass_data(device, pass);
 
